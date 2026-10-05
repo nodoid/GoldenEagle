@@ -1,5 +1,7 @@
 # Store listing: Golden Eagle / L'Aigle d'Or
 
+Paste-ready sheets for each store and language are generated from this file into `store/<en|fr>/<store>/UPLOAD.txt` by `tools/make_upload_copy.py`.
+
 Everything to paste into App Store Connect (iOS and Mac), Google Play Console and Microsoft Partner Center, in **English** and **French**. Every field is within its store's limit (checked by `tools/check_listing.py`). The screenshots, graphics and app previews are generated into `store/en/` and `store/fr/` by `tools/capture_all.sh`.
 
 > **Before you submit:**
@@ -25,7 +27,8 @@ Everything to paste into App Store Connect (iOS and Mac), Google Play Console an
 | In-app purchases | No |
 | Languages | English, French |
 | Support email | paul@all-the-johnsons.co.uk |
-| Privacy policy URL | *(host `docs/PRIVACY.md` publicly and paste the URL here)* |
+| Support URL | Host `docs/GoldenEagle-Support.html` (copy in `~/Downloads`) and paste its URL here |
+| Privacy policy URL | The support page's `#privacy` section (the policy is also in `docs/PRIVACY.md`) |
 | Age rating | Apple 9+ (infrequent/mild horror/fear themes); PEGI 7; ESRB Everyone |
 | Supported devices | iPhone, iPad, Android phones and tablets, Macs with Apple silicon or Intel (macOS 12 or later), Windows 10/11 PCs (x64 and Arm) |
 | Orientation | Landscape only |

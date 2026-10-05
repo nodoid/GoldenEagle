@@ -81,7 +81,10 @@ tools/build_windows.sh       # Windows x64 + arm64 .msix/.zip, built and tested 
 
 The listing copy for every store, in English and French, is in [`docs/LISTING.md`](docs/LISTING.md)
 (`python3 tools/check_listing.py` checks the limits); the privacy policy is
-[`docs/PRIVACY.md`](docs/PRIVACY.md). Screenshots, graphics and app previews are generated into
+[`docs/PRIVACY.md`](docs/PRIVACY.md); the support page (English, with the privacy policy) is
+`docs/GoldenEagle-Support.html` (`python3 tools/make_support_page.py` rebuilds it and copies it to
+`~/Downloads`). `python3 tools/make_upload_copy.py` writes a paste-ready `UPLOAD.txt` for each store
+and language into `store/`. Screenshots, graphics and app previews are generated into
 `store/en` and `store/fr` (git-ignored):
 
 ```sh
