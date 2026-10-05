@@ -15,6 +15,7 @@ Everything to paste into App Store Connect (iOS and Mac), Google Play Console an
 | App name | Golden Eagle (French: L'Aigle d'Or) |
 | Bundle ID (iOS, macOS) | `uk.co.allthejohnsons.goldeneagle` |
 | Package name (Android) | `uk.co.allthejohnsons.goldeneagle` |
+| Android upload key | `~/keys/goldeneagle-upload.jks`, alias `goldeneagle`, password in Keychain ("GoldenEagle Android upload keystore"); SHA-256 `91:BD:CD:D1:1E:39:47:C7:16:87:02:0A:6A:86:6D:FC:79:D4:70:D7:88:5E:E7:F9:65:AC:6C:F2:4C:0E:E7:EA` |
 | Windows package identity | `49556nodoid.GoldenEagle`, publisher `CN=A6EAEB04-6634-41C1-BDFE-695819ECE444` |
 | Provisioning profiles | iOS `rel-eagle` (App Store), `devel-eagle`; macOS `red-eagle-macos` (App Store), `devel-eagle-macos` |
 | Developer / seller | Paul F. Johnson |
