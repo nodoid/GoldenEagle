@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GoldenEagle.Core</RootNamespace>
+    <AssemblyName>GoldenEagle.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compile against MonoGame only; each platform head supplies its own MonoGame runtime. -->
+    <PackageReference Include="MonoGame.Framework.Native" Version="$(MonoGameVersion)">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="GoldenEagle.Tests" />
+  </ItemGroup>
+</Project>

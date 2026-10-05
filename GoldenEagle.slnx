@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="GoldenEagle.Core/GoldenEagle.Core.csproj" />
+  <Project Path="GoldenEagle.DesktopGL/GoldenEagle.DesktopGL.csproj" />
+  <Project Path="GoldenEagle.WindowsDX/GoldenEagle.WindowsDX.csproj" />
+  <Project Path="GoldenEagle.iOS/GoldenEagle.iOS.csproj" />
+  <Project Path="GoldenEagle.Android/GoldenEagle.Android.csproj" />
+  <Project Path="GoldenEagle.Tests/GoldenEagle.Tests.csproj" />
+</Solution>

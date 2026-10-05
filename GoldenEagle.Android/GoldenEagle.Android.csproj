@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <ApplicationId>uk.co.allthejohnsons.goldeneagle</ApplicationId>
+    <ApplicationTitle>Golden Eagle</ApplicationTitle>
+    <ApplicationVersion>$(BuildNumber)</ApplicationVersion>
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
+    <AssemblyName>GoldenEagle</AssemblyName>
+    <RootNamespace>GoldenEagle.Android</RootNamespace>
+  </PropertyGroup>
+  <!-- Play upload key, if present. The password is never stored: pass it in GOLDENEAGLE_KEYSTORE_PASS. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And Exists('$(HOME)/keys/goldeneagle-upload.jks')">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>$(HOME)/keys/goldeneagle-upload.jks</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>goldeneagle</AndroidSigningKeyAlias>
+    <AndroidSigningStorePass>env:GOLDENEAGLE_KEYSTORE_PASS</AndroidSigningStorePass>
+    <AndroidSigningKeyPass>env:GOLDENEAGLE_KEYSTORE_PASS</AndroidSigningKeyPass>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GoldenEagle.Core\GoldenEagle.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.Android" Version="$(MonoGameVersion)" />
+  </ItemGroup>
+</Project>
