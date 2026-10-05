@@ -2,7 +2,7 @@
 # Records every store capture with the macOS (DesktopGL) build into <dir> (default: a temporary
 # folder), then builds the store assets in store/ and the app preview videos (also copied to ~/Movies).
 #
-#   tools/capture_all.sh [dir]
+#   tools/capture_all.sh [dir] [stills]     ("stills" skips the videos)
 #
 # Stills: desktop and mobile prompts, English and French, at 2400 x 2240.
 # Videos: one language and layout at a time (1200 x 1120 frames are large), encoded and deleted.
@@ -23,6 +23,7 @@ for lang in en fr; do
   fi
 done
 python3 tools/make_store_assets.py stills "$CAP"
+[[ ${2:-} == stills ]] && exit 0
 
 for lang in en fr; do
   for layout in mobile desktop; do
