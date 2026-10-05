@@ -5,8 +5,8 @@
 #
 # The VM shares the Mac's Downloads folder (Z:\Downloads), so the source is staged in a temporary
 # folder there, built and tested with the Windows .NET SDK in C:\Build\GoldenEagle, and the published
-# builds are copied back. Pass "capture" to also record the Microsoft Store screenshots with the
-# Windows build (written to release/windows/capture).
+# builds are copied back. Pass "capture" to also record the Microsoft Store screenshots (English and
+# French) with the Windows build (written to release/windows/capture/<en|fr>/stills).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -39,7 +39,9 @@ prlctl exec "$VM" --current-user powershell -NoProfile -Command "
 if [[ ${1:-} == capture ]]; then
   prlctl exec "$VM" --current-user powershell -NoProfile -Command "
     Remove-Item -Recurse -Force C:\Build\cap -ErrorAction SilentlyContinue
-    Start-Process -Wait -FilePath C:\Build\out\arm64\GoldenEagle.exe -ArgumentList '--capture','C:\Build\cap','stills'
+    foreach (\$l in 'en','fr') {
+      Start-Process -Wait -FilePath C:\Build\out\arm64\GoldenEagle.exe -ArgumentList '--capture',"C:\Build\cap\\\$l",'stills','--lang',\$l
+    }
     Copy-Item -Recurse -Force C:\Build\cap $WSTAGE\capture
   "
 fi

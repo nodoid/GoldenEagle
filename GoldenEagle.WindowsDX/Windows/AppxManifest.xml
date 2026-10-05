@@ -13,10 +13,10 @@
             ProcessorArchitecture="$(ARCH)" />
 
   <Properties>
-    <DisplayName>GoldenEagle</DisplayName>
+    <DisplayName>Golden Eagle</DisplayName>
     <PublisherDisplayName>all-the-johnsons</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
-    <Description>Xenon 1 and Zorgon's Revenge. By PFJ, based on the PSS originals.</Description>
+    <Description>The Golden Eagle (L'Aigle d'Or): a 3D castle adventure. By PFJ, based on the 1984 Loriciels game.</Description>
   </Properties>
 
   <Dependencies>
@@ -25,20 +25,21 @@
 
   <Resources>
     <Resource Language="en-gb" />
+    <Resource Language="fr-fr" />
   </Resources>
 
   <Applications>
     <Application Id="GoldenEagle" Executable="GoldenEagle.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="GoldenEagle"
-        Description="Xenon 1 and Zorgon's Revenge. By PFJ, based on the PSS originals."
+        DisplayName="Golden Eagle"
+        Description="The Golden Eagle (L'Aigle d'Or): a 3D castle adventure. By PFJ, based on the 1984 Loriciels game."
         BackgroundColor="#000000"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"
                          Square71x71Logo="Assets\Square71x71Logo.png"
                          Square310x310Logo="Assets\Square310x310Logo.png"
-                         ShortName="GoldenEagle">
+                         ShortName="Golden Eagle">
           <uap:ShowNameOnTiles>
             <uap:ShowOn Tile="square150x150Logo" />
           </uap:ShowNameOnTiles>

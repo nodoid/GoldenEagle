@@ -46,7 +46,7 @@ public sealed class TitleScene : Scene
         c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Author)) / 2, 212, Strings.Author, new Color(170, 230, 170));
         float pulse = 0.6f + 0.4f * MathF.Sin(Ticks * 0.12f);
         string start = Strings.PressToStart(Game.IsMobile);
-        c.TextShadowed((Canvas.Width - Canvas.TextWidth(start)) / 2, 126, start, new Color(255, 120, 255) * pulse);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(start)) / 2, 178, start, Color.Lerp(new Color(255, 214, 90), Color.White, pulse));
     }
 
     /// <summary>The great golden eagle, glowing, with a glint running over its wings.</summary>

@@ -192,8 +192,9 @@ public class GoldenEagleGame : Game
         if (_target == null || _target.Width != w || _target.Height != h)
         {
             _target?.Dispose();
-            _target = new RenderTarget2D(GraphicsDevice, w, h, false, SurfaceFormat.Color, DepthFormat.None, 4,
-                RenderTargetUsage.DiscardContents);
+            // Multisampled targets smooth the lines on desktop; MonoGame's mobile GL backend can't resolve them.
+            _target = new RenderTarget2D(GraphicsDevice, w, h, false, SurfaceFormat.Color, DepthFormat.None,
+                Platform.IsMobile ? 0 : 4, RenderTargetUsage.DiscardContents);
         }
         return scale;
     }

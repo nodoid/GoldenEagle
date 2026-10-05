@@ -4,12 +4,12 @@
 #   release/macos/GoldenEagle.pkg   (upload to App Store Connect with Transporter)
 #
 # Signing uses "Apple Distribution: Paul Johnson (3UH7BE38T3)", the macOS App Store profile for
-# uk.co.allthejohnsons.goldeneagle (~/Downloads/relgoldeneaglemac.provisionprofile, or set
+# uk.co.allthejohnsons.goldeneagle (~/Downloads/redeaglemacos.provisionprofile, or set
 # GOLDENEAGLE_MAC_PROFILE) and "3rd Party Mac Developer Installer: Paul Johnson (3UH7BE38T3)" for the .pkg.
 # The Windows build is made in Parallels by tools/build_windows.sh.
 #
 #   tools/build_desktop.sh        App Store build (.app + .pkg)
-#   tools/build_desktop.sh dev    development-signed .app (devel-goldeneagle-macos profile) that runs locally
+#   tools/build_desktop.sh dev    development-signed .app (devel-eagle-macos profile) that runs locally
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,11 +19,11 @@ BUILD=$(dotnet msbuild $PROJECT -getProperty:BuildNumber)
 MODE=${1:-store}
 APP_SIGN="Apple Distribution: Paul Johnson (3UH7BE38T3)"
 PKG_SIGN="3rd Party Mac Developer Installer: Paul Johnson (3UH7BE38T3)"
-PROFILE=${GOLDENEAGLE_MAC_PROFILE:-$HOME/Downloads/relgoldeneaglemac.provisionprofile}
+PROFILE=${GOLDENEAGLE_MAC_PROFILE:-$HOME/Downloads/redeaglemacos.provisionprofile}
 out=release/macos
 if [[ $MODE == dev ]]; then
   APP_SIGN="Apple Development: Paul Johnson (WFWPL93CN6)"
-  PROFILE=${GOLDENEAGLE_MAC_PROFILE:-$HOME/Downloads/develgoldeneaglemacos.provisionprofile}
+  PROFILE=${GOLDENEAGLE_MAC_PROFILE:-$HOME/Downloads/develeaglemacos.provisionprofile}
   out=release/macos-dev
 fi
 
@@ -44,6 +44,11 @@ sdk=$(xcrun --sdk macosx --show-sdk-version)
 clang -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=12.0 -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
   -framework AppKit -o "$app/Contents/MacOS/GoldenEagle" GoldenEagle.DesktopGL/macOS/launcher.c
 cp GoldenEagle.DesktopGL/GoldenEagle.icns "$app/Contents/Resources/"
+# English and French names for the Finder and the menu bar.
+for lang in en fr; do
+  mkdir -p "$app/Contents/Resources/$lang.lproj"
+  cp GoldenEagle.iOS/Resources/$lang.lproj/InfoPlist.strings "$app/Contents/Resources/$lang.lproj/"
+done
 sed -e "s/\$(VERSION)/$VERSION/" -e "s/\$(BUILD)/$BUILD/" GoldenEagle.DesktopGL/macOS/Info.plist > "$app/Contents/Info.plist"
 plist="$app/Contents/Info.plist"
 plutil -insert DTPlatformName -string macosx "$plist"
