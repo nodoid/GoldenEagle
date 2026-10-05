@@ -40,7 +40,7 @@ if [[ ${1:-} == capture ]]; then
   prlctl exec "$VM" --current-user powershell -NoProfile -Command "
     Remove-Item -Recurse -Force C:\Build\cap -ErrorAction SilentlyContinue
     foreach (\$l in 'en','fr') {
-      Start-Process -Wait -FilePath C:\Build\out\arm64\GoldenEagle.exe -ArgumentList '--capture',"C:\Build\cap\\\$l",'stills','--lang',\$l
+      Start-Process -Wait -FilePath C:\Build\out\arm64\GoldenEagle.exe -ArgumentList '--capture',('C:\Build\cap\' + \$l),'stills','--lang',\$l
     }
     Copy-Item -Recurse -Force C:\Build\cap $WSTAGE\capture
   "
