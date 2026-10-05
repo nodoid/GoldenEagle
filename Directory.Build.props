@@ -3,7 +3,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Authors>PFJ</Authors>
+    <Authors>Paul F. Johnson</Authors>
+    <Copyright>© 2026 Paul F. Johnson</Copyright>
     <Product>Golden Eagle</Product>
     <Description>The Golden Eagle (L'Aigle d'Or) - by PFJ, based on the Loriciels original.</Description>
     <Version>1.0.0</Version>

@@ -38,7 +38,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>By PFJ, based on L'Aigle d'Or by Louis-Marie Rocques (Loriciels, 1984).</string>
+	<string>© 2026 Paul F. Johnson. Based on L'Aigle d'Or by Louis-Marie Rocques (Loriciels, 1984).</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

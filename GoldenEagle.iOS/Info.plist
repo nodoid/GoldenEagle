@@ -20,7 +20,7 @@
 	<key>MinimumOSVersion</key>
 	<string>15.0</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>By PFJ, based on L'Aigle d'Or by Louis-Marie Rocques (Loriciels, 1984).</string>
+	<string>© 2026 Paul F. Johnson. Based on L'Aigle d'Or by Louis-Marie Rocques (Loriciels, 1984).</string>
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>
