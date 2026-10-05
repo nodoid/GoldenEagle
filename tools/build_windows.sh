@@ -50,7 +50,7 @@ rm -rf $out && mkdir -p $out
 for arch in x64 arm64; do
   cp "$STAGE/win-$arch.zip" "$out/GoldenEagle-$VERSION-$arch.zip"
   pkg=$(mktemp -d)/package
-  mkdir -p $pkg && (cd $pkg && unzip -q "$OLDPWD/$out/GoldenEagle-$VERSION-$arch.zip")
+  mkdir -p $pkg && (cd $pkg && { unzip -q "$OLDPWD/$out/GoldenEagle-$VERSION-$arch.zip" 2>/dev/null || [[ $? -eq 1 ]]; })
   mkdir -p $pkg/Assets
   cp GoldenEagle.WindowsDX/Windows/Assets/*.png $pkg/Assets/
   sed -e "s/\$(VERSION)/$VERSION.0/" -e "s/\$(ARCH)/$arch/" GoldenEagle.WindowsDX/Windows/AppxManifest.xml > $pkg/AppxManifest.xml
