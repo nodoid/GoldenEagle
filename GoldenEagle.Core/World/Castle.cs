@@ -244,7 +244,7 @@ public sealed class Castle
         eyrie.Decor.Add(new Decor(DecorKind.Window, Side.Right, 0.5f));
         eyrie.Decor.Add(new Decor(DecorKind.Window, Side.Back, -0.55f));
         eyrie.Decor.Add(new Decor(DecorKind.Window, Side.Back, 0.55f));
-        eyrie.Items.Add(new ItemPlacement(ItemKind.Eagle, OricColor.Yellow, 0f, 0.75f));
+        eyrie.Items.Add(new ItemPlacement(ItemKind.Eagle, OricColor.Yellow, 0.4f, 0.8f));
         eyrie.Monsters.Add(new MonsterPlacement(MonsterKind.Ghost, -0.6f, 0.6f));
         eyrie.Monsters.Add(new MonsterPlacement(MonsterKind.Ghost, 0.6f, 0.6f));
 

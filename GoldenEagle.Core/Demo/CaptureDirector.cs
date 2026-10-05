@@ -64,7 +64,7 @@ public sealed class CaptureDirector : ISoundPlayer
             shots.AddRange(Videos());
         int sc = Array.IndexOf(args, "--scale");
         float scale = sc >= 0 && sc + 1 < args.Length && float.TryParse(args[sc + 1], System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out float s) ? s : what == "videos" ? 6f : 10f;
+            System.Globalization.CultureInfo.InvariantCulture, out float s) ? s : what == "videos" ? 5f : 10f;
         return new CaptureDirector(folder, shots, mobile, language, scale);
     }
 
@@ -81,7 +81,7 @@ public sealed class CaptureDirector : ISoundPlayer
         yield return new Shot("04-chapel", Castle, 0, Ready: In("chapel", 50));
         yield return new Shot("05-throne", Castle, 0, Ready: In("throne", 60));
         yield return new Shot("06-catacombs", Castle, 0, Ready: In("catacombs", 70));
-        yield return new Shot("07-eyrie", Castle, 0, Ready: In("eyrie", 45));
+        yield return new Shot("07-eyrie", Castle, 0, Ready: In("eyrie", 14));
         yield return new Shot("08-library", Castle, 0, Ready: In("library", 40));
         yield return new Shot("09-victory", (g, s) => VictoryScene(g, s), 30);
         yield return new Shot("10-menu", (g, s) => new MenuScene(g), 30);
