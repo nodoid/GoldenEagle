@@ -3,6 +3,7 @@
 
     python3 tools/make_store_assets.py stills <capture-root>
     python3 tools/make_store_assets.py video <capture-root> <en|fr> <mobile|desktop>
+    python3 tools/make_store_assets.py xbox             (only the Xbox images)
 
 <capture-root> holds the output of the game's capture mode (see tools/capture_all.sh):
 
@@ -91,6 +92,87 @@ def night(w, h, eagle_box=None, seed=1984):
     return img.convert('RGB')
 
 
+def scale2x(rows):
+    """Scale2x (EPX) on rows of characters, as the game smooths its font."""
+    h, w = len(rows), len(rows[0])
+    at = lambda x, y: rows[min(max(y, 0), h - 1)][min(max(x, 0), w - 1)]
+    out = [[''] * (w * 2) for _ in range(h * 2)]
+    for y in range(h):
+        for x in range(w):
+            b, d, e, f, hh = at(x, y - 1), at(x - 1, y), at(x, y), at(x + 1, y), at(x, y + 1)
+            e0 = e1 = e2 = e3 = e
+            if b != hh and d != f:
+                e0 = d if d == b else e
+                e1 = f if b == f else e
+                e2 = d if d == hh else e
+                e3 = f if hh == f else e
+            out[y * 2][x * 2], out[y * 2][x * 2 + 1] = e0, e1
+            out[y * 2 + 1][x * 2], out[y * 2 + 1][x * 2 + 1] = e2, e3
+    return [''.join(r) for r in out]
+
+
+def oric_text(text, height, colour=(255, 214, 90)):
+    """Text in the game's font (the Oric ROM font with its French accents), smoothed with Scale2x
+    as in the game, in gold with a dark drop shadow."""
+    import re
+    src = open(os.path.join(ROOT, 'GoldenEagle.Core', 'Oric', 'OricFont.cs')).read()
+    rom = [int(x, 16) for x in re.findall(r'0x([0-9A-F]{2}),', src.split('Data =')[1].split('];')[0])]
+    extras = {}
+    for ch, rows in re.findall(r"\('\\u([0-9A-F]{4})', \[([^\]]*)\]\)", src):
+        extras[chr(int(ch, 16))] = [int(x, 16) for x in re.findall(r'0x([0-9A-F]{2})', rows)]
+
+    def glyph(c):
+        if c in extras:
+            return extras[c]
+        i = ord(c) - 32
+        return rom[i * 8:i * 8 + 8] if 0 <= i < 96 else [0] * 8
+
+    rows = ['' for _ in range(8)]
+    for c in text:
+        g = glyph(c)
+        for y in range(8):
+            rows[y] += ''.join('Y' if g[y] & (1 << (5 - x)) else '.' for x in range(6))
+    for _ in range(3):
+        rows = scale2x(rows)
+    mask = Image.new('L', (len(rows[0]), len(rows)))
+    mask.putdata([255 if ch == 'Y' else 0 for r in rows for ch in r])
+    k = height / mask.height
+    mask = mask.resize((round(mask.width * k), round(height)), Image.LANCZOS)
+    pad = max(2, int(height * 0.08))
+    out = Image.new('RGBA', (mask.width + pad * 2, mask.height + pad * 2), (0, 0, 0, 0))
+    shadow = Image.new('RGBA', out.size, (0, 0, 0, 0))
+    shadow.paste((0, 0, 0, 200), (pad + pad // 2, pad + pad // 2), mask)
+    out = Image.alpha_composite(out, shadow.filter(ImageFilter.GaussianBlur(pad / 2)))
+    out.paste(colour + (255,), (pad, pad), mask)
+    return out
+
+
+def xbox(ms, lang):
+    """The Xbox images Partner Center asks for: key art and hero art with the title, square art without."""
+    x = os.path.join(ms, 'xbox')
+    os.makedirs(x, exist_ok=True)
+    title = 'THE GOLDEN EAGLE' if lang == 'en' else "L'AIGLE D'OR"
+    sub = "L'AIGLE D'OR" if lang == 'en' else 'THE GOLDEN EAGLE'
+    # Branded key art, 584 x 800: the eagle above the title.
+    img = night(584, 800, (40, 150, 504))
+    t = oric_text(title, 34 if lang == 'en' else 44)
+    img.paste(t, ((584 - t.width) // 2, 520), t)
+    t2 = oric_text(sub, 22, (150, 220, 255))
+    img.paste(t2, ((584 - t2.width) // 2, 600), t2)
+    img.save(os.path.join(x, 'branded-key-art-584x800.png'))
+    # Titled hero art, 16:9: the title on the left, the eagle on the right.
+    for w, h in [(1920, 1080), (3840, 2160)]:
+        img = night(w, h, (w * 0.52, h * 0.16, w * 0.44))
+        t = oric_text(title, h * (0.075 if lang == 'en' else 0.1))
+        img.paste(t, (int(w * 0.05), int(h * 0.62)), t)
+        t2 = oric_text(sub, h * 0.045, (150, 220, 255))
+        img.paste(t2, (int(w * 0.055), int(h * 0.62) + t.height), t2)
+        img.save(os.path.join(x, f'titled-hero-art-{w}x{h}.png'))
+    # Featured promotional square art: no title.
+    for n in (1080, 2160):
+        night(n, n, (n * 0.08, n * 0.3, n * 0.84)).save(os.path.join(x, f'featured-promotional-square-art-{n}x{n}.png'))
+
+
 def stills(cap):
     icon = Image.open(os.path.join(ROOT, 'art', 'icon-1024.png')).convert('RGB')
     for lang in LANGS:
@@ -132,6 +214,7 @@ def stills(cap):
         # Super hero art must carry no text: the eagle over the night sky, off to the right.
         for w, h in [(1920, 1080), (3840, 2160)]:
             night(w, h, (w * 0.5, h * 0.18, w * 0.42)).save(os.path.join(ms, f'super-hero-art-{w}x{h}.png'))
+        xbox(ms, lang)
     print('stills done')
 
 
@@ -202,6 +285,10 @@ def video(cap, lang, layout):
 if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'stills':
         stills(sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] == 'xbox':
+        for lang in LANGS:
+            xbox(os.path.join(STORE, lang, 'microsoft-store'), lang)
+            print(f'store/{lang}/microsoft-store/xbox')
     elif len(sys.argv) == 5 and sys.argv[1] == 'video':
         video(sys.argv[2], sys.argv[3], sys.argv[4])
     else:

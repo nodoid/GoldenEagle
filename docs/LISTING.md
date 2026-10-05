@@ -316,7 +316,19 @@ Par PFJ, d'après le jeu Loriciels de 1984 de Louis-Marie Rocques.
 
 ## Microsoft Store
 
+Partner Center asks for more than the other stores. Everything below is needed for every submission.
+
 ### English
+
+**Product name** (256 max)
+```
+Golden Eagle
+```
+
+**Short description** (1000 max)
+```
+A high-resolution remake of L'Aigle d'Or, the 1984 Oric castle adventure. Explore twenty rooms in 3D perspective, unlock the coloured doors and bring the Golden Eagle home. In English and French.
+```
 
 **Description** (10000 max)
 ```
@@ -343,7 +355,38 @@ English and French
 Keyboard, mouse or game controller
 ```
 
+**Search terms** (7 max, 30 characters each)
+```
+castle adventure
+retro
+oric
+golden eagle
+ghosts
+dungeon
+aigle d'or
+```
+
+**What's new in this version** (1500 max)
+```
+First release.
+```
+
+**Notes for certification** (2000 max)
+```
+No account, sign-in, network connection or purchase is needed; all content is available immediately. To play: press SPACE (or click) on the title, then choose PLAY. Cursor keys or clicking the floor walk, SPACE or clicking an object takes it, 1-4 or TAB choose an object, U uses it, D drops it, P pauses, Esc returns to the menu, L switches between English and French, F11 toggles full screen. Instructions are on the menu. The game is fully offline and stores only high scores and settings locally.
+```
+
 ### Français
+
+**Nom du produit** (256 max)
+```
+L'Aigle d'Or
+```
+
+**Description courte** (1000 max)
+```
+Un remake en haute résolution de L'Aigle d'Or, l'aventure Oric de 1984. Explorez vingt salles en perspective 3D, ouvrez les portes de couleur et rapportez l'Aigle d'Or. En français et en anglais.
+```
 
 **Description** (10000 max)
 ```
@@ -370,6 +413,61 @@ Français et anglais
 Clavier, souris ou manette
 ```
 
-**Screenshots:** `store/<en|fr>/microsoft-store/screenshots-3840x2160/` (also 1920x1080 and 1366x768), 10, captured by the Windows build.
-**Art:** `box-art-2160x2160.png`, `poster-art-1440x2160.png`, `super-hero-art-1920x1080.png` / `3840x2160.png` (no text, as required), `store-logo-300x300.png`.
-**Restricted capability:** `runFullTrust` is required because the game is a desktop (Win32) app packaged as MSIX. It reads and writes only its own settings and high scores.
+**Termes de recherche** (7 max, 30 characters each)
+```
+aventure château
+rétro
+oric
+aigle d'or
+fantômes
+donjon
+loriciels
+```
+
+**Nouveautés de cette version** (1500 max)
+```
+Première version.
+```
+
+**Remarques pour la certification** (2000 max)
+```
+Aucun compte, connexion, réseau ou achat n'est nécessaire ; tout le contenu est disponible immédiatement. Pour jouer : appuyez sur ESPACE (ou cliquez) sur le titre, puis choisissez JOUER. Les flèches ou un clic sur le sol font marcher, ESPACE ou un clic sur un objet le prend, 1-4 ou TAB choisit un objet, U l'utilise, D le pose, P met en pause, Échap revient au menu, L passe du français à l'anglais, F11 bascule le plein écran. Les instructions sont dans le menu. Le jeu fonctionne entièrement hors ligne et ne garde que les scores et les réglages sur l'appareil.
+```
+
+**Screenshots:** captured by the Windows (DirectX) build running in Parallels: `store/<en|fr>/microsoft-store/screenshots-3840x2160/` (4K), `screenshots-1920x1080/` and `screenshots-1366x768/`, 10 each.
+
+**Store art** (in `store/<en|fr>/microsoft-store/`)
+
+| Partner Center slot | File | Notes |
+|---|---|---|
+| 16:9 Super hero art | `super-hero-art-3840x2160.png` (also `-1920x1080`) | No title text, as the Store overlays its own; the lower left is kept clear |
+| 1:1 Box art | `box-art-2160x2160.png` | |
+| 2:3 Poster art | `poster-art-1440x2160.png` | |
+| App tile icon | `store-logo-300x300.png` | |
+| Xbox branded key art | `xbox/branded-key-art-584x800.png` | Includes the title |
+| Xbox titled hero art | `xbox/titled-hero-art-3840x2160.png` (also `-1920x1080`) | Includes the title |
+| Xbox featured promotional square art | `xbox/featured-promotional-square-art-2160x2160.png` (also `-1080x1080`) | No title |
+
+All of them are built from the game's own artwork by `tools/make_store_assets.py`.
+
+**Packages:** `release/windows/GoldenEagle-1.0.0-x64.msix` and `GoldenEagle-1.0.0-arm64.msix` (built by `tools/build_windows.sh`; the Store signs them).
+
+**Restricted capabilities** (Partner Center › Submission options › *Why does your app need these capabilities?*)
+
+The package declares one restricted capability, `runFullTrust` (in `GoldenEagle.WindowsDX/Windows/AppxManifest.xml`). No other restricted or general capabilities are declared: not `internetClient`, file system access, webcam, microphone or location. Paste:
+```
+runFullTrust: Golden Eagle is a packaged desktop (Win32) game, built with .NET 10 and MonoGame and rendered with DirectX 11. Every packaged Win32 desktop app needs runFullTrust to start its executable (Windows.FullTrustApplication entry point). The game uses it only to run its own process. It does not use the internet, other apps or processes, the user's documents or system settings. It reads the keyboard, mouse and game controllers, draws with DirectX, plays sound with XAudio, and saves its high scores and settings in its own app data folder.
+```
+
+**Other Partner Center answers**
+
+| Field | Answer |
+|---|---|
+| Category | Games › Adventure |
+| Pricing | Free |
+| Age ratings | IARC questionnaire: same answers as Google Play (mild fantasy horror; no blood, gambling or user interaction) |
+| Input | Keyboard, mouse and game controller (Xbox controller supported) |
+| Display modes | Windowed and full screen; landscape |
+| Privacy policy URL | The support page's `#privacy` section |
+| Support contact | paul@all-the-johnsons.co.uk |
+| Languages | English (United Kingdom) en-gb and French (France) fr-fr, as in the package manifest |

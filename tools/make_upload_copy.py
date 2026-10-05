@@ -60,7 +60,8 @@ def write(lang, store, text):
 
 
 def main():
-    s = sections(open(LISTING).read())
+    full_text = open(LISTING).read()
+    s = sections(full_text)
     ios = s['Apple App Store (iPhone and iPad)']
     mac = s['Mac App Store']
     play = s['Google Play']
@@ -163,37 +164,45 @@ def main():
             t += 'App content answers (privacy, ads, rating, data safety): see store/en/google-play/UPLOAD.txt.\n'
         write(lang, 'google-play', t)
 
-        # ---------------- Microsoft Store
+        # ---------------- Microsoft Store (Partner Center needs every part below, every time)
         t = heading(f'GOLDEN EAGLE - MICROSOFT STORE - {name.upper()}')
         t += f'Partner Center > Golden Eagle > Submission > Store listings > {ms_lang}\n\n'
-        _, limit, body = ms[key][0]
-        t += field('Description', limit, body)
-        label, limit, body = ms[key][1]
-        t += field('Product features (one per box)', 200, body, per_line=True)
+        ms_labels = ['Product name', 'Short description', 'Description', 'Product features (one per box)',
+                     'Search terms (one per box)', "What's new in this version", 'Notes for certification']
+        for label, (_, limit, body) in zip(ms_labels, ms[key]):
+            per_box = 'one per box' in label
+            t += field(label, 200 if label.startswith('Product features') else 30 if per_box else limit, body, per_line=per_box)
         t += field('Short title', 50, 'Golden Eagle' if lang == 'en' else "L'Aigle d'Or")
         t += files([
             f'Screenshots (10): {d}/microsoft-store/screenshots-3840x2160/ (or 1920x1080 / 1366x768)',
-            f'Box art 1:1: {d}/microsoft-store/box-art-2160x2160.png',
-            f'Poster art 2:3: {d}/microsoft-store/poster-art-1440x2160.png',
-            f'Super hero art 16:9 (no text): {d}/microsoft-store/super-hero-art-3840x2160.png',
-            f'Store logo: {d}/microsoft-store/store-logo-300x300.png',
+            f'16:9 Super hero art (no text): {d}/microsoft-store/super-hero-art-3840x2160.png (also 1920x1080)',
+            f'1:1 Box art: {d}/microsoft-store/box-art-2160x2160.png',
+            f'2:3 Poster art: {d}/microsoft-store/poster-art-1440x2160.png',
+            f'App tile icon: {d}/microsoft-store/store-logo-300x300.png',
+            f'Xbox branded key art (with title): {d}/microsoft-store/xbox/branded-key-art-584x800.png',
+            f'Xbox titled hero art (with title): {d}/microsoft-store/xbox/titled-hero-art-3840x2160.png (also 1920x1080)',
+            f'Xbox featured promotional square art (no title): {d}/microsoft-store/xbox/featured-promotional-square-art-2160x2160.png (also 1080x1080)',
             'Packages: release/windows/GoldenEagle-1.0.0-x64.msix and GoldenEagle-1.0.0-arm64.msix',
         ])
         if lang == 'en':
+            justification = re.search(r'Paste:\n```\n(.*?)\n```', full_text, re.S).group(1)
+            t += heading('RESTRICTED CAPABILITIES', '-')
+            t += 'Submission options > "Why does your app need these capabilities?" (runFullTrust is the only one declared):\n\n'
+            t += justification + '\n\n'
             t += answers([
                 ('Package identity', '49556nodoid.GoldenEagle'),
                 ('Category', 'Games > Adventure'),
-                ('Pricing', 'Free'),
-                ('Age ratings', 'IARC questionnaire: same answers as Google Play'),
+                ('Pricing', 'Free; no in-app purchases'),
+                ('Age ratings', 'IARC questionnaire: same answers as Google Play (mild fantasy horror; no blood, gambling or user interaction)'),
                 ('Privacy policy URL', PRIVACY),
-                ('Support contact', 'paul@all-the-johnsons.co.uk'),
                 ('Website', SUPPORT),
+                ('Support contact', 'paul@all-the-johnsons.co.uk'),
                 ('Input', 'Keyboard, mouse and game controller'),
-                ('runFullTrust', 'Desktop (Win32) game packaged as MSIX; it reads and writes only its own settings and scores.'),
-                ('Certification notes', 'Offline single-player game, no account needed. Arrow keys walk, Space takes, U uses, Esc for the menu.'),
+                ('Display', 'Windowed and full screen; landscape'),
+                ('Languages', 'en-gb and fr-fr (as declared in the package manifest)'),
             ])
         else:
-            t += 'Properties, pricing and age rating answers: see store/en/microsoft-store/UPLOAD.txt.\n'
+            t += 'Restricted capability justification, properties, pricing and age rating answers: see store/en/microsoft-store/UPLOAD.txt.\n'
         write(lang, 'microsoft-store', t)
 
 
