@@ -17,7 +17,8 @@ namespace GoldenEagle.Core;
 
 /// <summary>
 /// The Golden Eagle (L'Aigle d'Or), by PFJ, based on the 1984 Loriciels game by Louis-Marie Rocques.
-/// Renders a 240x224 Oric screen scaled to the window, in French or English.
+/// Laid out on the Oric's 240x224 screen but drawn at the full resolution of the display, in
+/// French or English.
 /// </summary>
 public class GoldenEagleGame : Game
 {
@@ -98,7 +99,6 @@ public class GoldenEagleGame : Game
 
     protected override void LoadContent()
     {
-        _target = new RenderTarget2D(GraphicsDevice, Canvas.Width, Canvas.Height);
         _present = new SpriteBatch(GraphicsDevice);
         Canvas = new Canvas(GraphicsDevice);
         Input = new InputManager(IsMobile);
@@ -107,9 +107,7 @@ public class GoldenEagleGame : Game
         Strings.Current = Capture?.Language ?? Settings.Language;
         for (int i = 0; i < Settings.Volume; i++)
             Sound.CycleVolume();
-        if (Capture != null)
-            while (Sound.Level != 0)
-                Sound.CycleVolume();
+        Sound.Muted = Capture != null;
         HighScores = new HighScoreTable(Platform.DataDirectory);
         HighScores.Load();
         _scene = new TitleScene(this);
@@ -182,11 +180,30 @@ public class GoldenEagleGame : Game
         base.Update(gameTime);
     }
 
+    /// <summary>Largest render scale used on screen (device pixels per virtual pixel).</summary>
+    public const float MaxScale = 8f;
+
+    /// <summary>Makes sure the render target matches the resolution the frame is drawn at.</summary>
+    private float PrepareTarget()
+    {
+        UpdateDestination();
+        float scale = Capture?.Scale ?? Math.Clamp((float)_destination.Width / Canvas.Width, 1f, MaxScale);
+        int w = (int)MathF.Round(Canvas.Width * scale), h = (int)MathF.Round(Canvas.Height * scale);
+        if (_target == null || _target.Width != w || _target.Height != h)
+        {
+            _target?.Dispose();
+            _target = new RenderTarget2D(GraphicsDevice, w, h, false, SurfaceFormat.Color, DepthFormat.None, 4,
+                RenderTargetUsage.DiscardContents);
+        }
+        return scale;
+    }
+
     protected override void Draw(GameTime gameTime)
     {
+        float scale = PrepareTarget();
         GraphicsDevice.SetRenderTarget(_target);
         GraphicsDevice.Clear(Color.Black);
-        Canvas.Begin();
+        Canvas.Begin(scale);
         _scene.Draw(Canvas);
         if (_paused && Capture == null)
         {
@@ -199,7 +216,7 @@ public class GoldenEagleGame : Game
         Capture?.AfterDraw(_target);
 
         GraphicsDevice.Clear(Color.Black);
-        _present.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp);
+        _present.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.LinearClamp);
         _present.Draw(_target, _destination, Color.White);
         _present.End();
         base.Draw(gameTime);
@@ -208,7 +225,7 @@ public class GoldenEagleGame : Game
     private void UpdateDestination()
     {
         var pp = GraphicsDevice.PresentationParameters;
-        _destination = ComputeDestination(pp.BackBufferWidth, pp.BackBufferHeight, !IsMobile);
+        _destination = ComputeDestination(pp.BackBufferWidth, pp.BackBufferHeight, false);
     }
 
     /// <summary>Largest aspect-correct rectangle for the Oric screen, integer scaled when it fits.</summary>

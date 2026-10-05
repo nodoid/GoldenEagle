@@ -54,7 +54,9 @@ public sealed class Sprite
         {
             if (!Cache.TryGetValue(rows, out var s))
             {
-                s = new Sprite(name ?? "sprite", rows);
+                // Maps declared in SpriteData are named after their field, which is also the
+                // name of their high-resolution picture.
+                s = new Sprite(SpriteData.NameOf(rows) ?? name ?? "sprite", rows);
                 Cache[rows] = s;
             }
             return s;
@@ -66,6 +68,9 @@ public sealed class Sprite
 
     public OricColor? ColorAt(int x, int y) =>
         IsSolid(x, y) ? (OricColor)(Pixels[y * Width + x] - 1) : null;
+
+    /// <summary>Name of the plain sprite a recoloured copy was made from (for tinting its picture).</summary>
+    public Sprite Original { get; private set; }
 
     private Sprite _mirror;
     private readonly Sprite[] _recolored = new Sprite[8];
@@ -101,7 +106,7 @@ public sealed class Sprite
         var p = new byte[Pixels.Length];
         for (int i = 0; i < p.Length; i++)
             p[i] = Pixels[i] == 0 ? (byte)0 : (byte)((int)color + 1);
-        return new Sprite(Name + "-" + color, Width, Height, p);
+        return new Sprite(Name + "-" + color, Width, Height, p) { Original = this };
     }
 
     /// <summary>

@@ -40,6 +40,7 @@ public sealed class InstructionsScene : Scene
 
     public override void Draw(Canvas c)
     {
+        Backdrop.Draw(c, Ticks, 0.35f);
         c.TextCentered(2, Strings.Title, OricColor.Yellow, 2);
         switch (_page)
         {

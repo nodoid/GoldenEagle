@@ -6,9 +6,23 @@ using GoldenEagle.Core.Oric;
 
 namespace GoldenEagle.Core.Graphics;
 
+/// <summary>A rectangle in (fractional) virtual pixels.</summary>
+public readonly record struct RectF(float X, float Y, float W, float H)
+{
+    public float Right => X + W;
+    public float Bottom => Y + H;
+    public bool Contains(float x, float y) => x >= X && x < Right && y >= Y && y < Bottom;
+    public bool Contains(Vector2 p) => Contains(p.X, p.Y);
+    public RectF Inflate(float by) => new(X - by, Y - by, W + by * 2, H + by * 2);
+    public static implicit operator RectF(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
+}
+
 /// <summary>
-/// Draws into the 240x224 virtual Oric screen: lines, filled shapes, sprites (also scaled for
-/// depth) and ROM-font text. All coordinates are in Oric pixels.
+/// Draws the game at high resolution. Layout uses a 240x224 virtual screen (the Oric's, so the
+/// screens keep its proportions and text grid), but everything is rendered at the full device
+/// resolution: shapes are filled per device pixel row with smooth shading, lines are thin, and
+/// the pixel art and the ROM font are enlarged with the Scale2x edge-smoothing filter and drawn
+/// with linear filtering, so nothing looks blocky.
 /// </summary>
 public sealed class Canvas : IDisposable
 {
@@ -17,9 +31,18 @@ public sealed class Canvas : IDisposable
     public const int Columns = Width / OricFont.GlyphWidth;   // 40
     public const int Rows = Height / OricFont.GlyphHeight;    // 28
 
+    /// <summary>Sprites are smoothed to this many texels per art pixel (Scale2x three times).</summary>
+    public const int SpriteDetail = 8;
+
+    /// <summary>Font glyphs are smoothed to this many texels per pixel (Scale2x twice).</summary>
+    public const int FontDetail = 4;
+
     private readonly GraphicsDevice _device;
     private readonly SpriteBatch _batch;
     private readonly Texture2D _pixel;
+    private readonly Texture2D _ramp;
+    private readonly Texture2D _shadow;
+    private readonly Texture2D _glow;
     private readonly Texture2D _font;
     private readonly Dictionary<Sprite, Texture2D> _textures = new();
 
@@ -29,150 +52,297 @@ public sealed class Canvas : IDisposable
         _batch = new SpriteBatch(device);
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
+        _ramp = BuildRamp(device);
+        _shadow = BuildRadial(device, 64, 32, 0.55f);
+        _glow = BuildRadial(device, 64, 64, 1f);
         _font = BuildFont(device);
     }
 
-    public void Begin() => _batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+    /// <summary>Device pixels per virtual pixel for the frame being drawn.</summary>
+    public float Scale { get; private set; } = 1f;
+
+    private int DeviceWidth => (int)MathF.Round(Width * Scale);
+    private int DeviceHeight => (int)MathF.Round(Height * Scale);
+
+    public void Begin(float scale)
+    {
+        Scale = scale;
+        _batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp);
+    }
 
     public void End() => _batch.End();
 
-    public void Fill(int x, int y, int w, int h, OricColor color)
+    // ---------------------------------------------------------------- rectangles and lines
+
+    public void Fill(float x, float y, float w, float h, Color color)
     {
         if (w <= 0 || h <= 0)
             return;
-        _batch.Draw(_pixel, new Rectangle(x, y, w, h), color.ToColor());
+        _batch.Draw(_pixel, new Vector2(x * Scale, y * Scale), null, color, 0f, Vector2.Zero,
+            new Vector2(w * Scale, h * Scale), SpriteEffects.None, 0f);
     }
 
-    public void Plot(int x, int y, OricColor color) => Fill(x, y, 1, 1, color);
+    public void Fill(float x, float y, float w, float h, OricColor color) => Fill(x, y, w, h, color.ToColor());
 
-    /// <summary>Outline of a rectangle, one pixel wide.</summary>
-    public void Frame(int x, int y, int w, int h, OricColor color)
+    public void Plot(float x, float y, OricColor color) => Fill(x, y, 1, 1, color);
+
+    /// <summary>Outline of a rectangle.</summary>
+    public void Frame(float x, float y, float w, float h, Color color, float thickness = 1f)
     {
-        Fill(x, y, w, 1, color);
-        Fill(x, y + h - 1, w, 1, color);
-        Fill(x, y, 1, h, color);
-        Fill(x + w - 1, y, 1, h, color);
+        Fill(x, y, w, thickness, color);
+        Fill(x, y + h - thickness, w, thickness, color);
+        Fill(x, y, thickness, h, color);
+        Fill(x + w - thickness, y, thickness, h, color);
     }
 
-    /// <summary>Bresenham line, as drawn by the Oric's DRAW command.</summary>
-    public void Line(int x0, int y0, int x1, int y1, OricColor color)
+    public void Frame(float x, float y, float w, float h, OricColor color, float thickness = 1f) =>
+        Frame(x, y, w, h, color.ToColor(), thickness);
+
+    /// <summary>A thin line (width in virtual pixels; at least one device pixel).</summary>
+    public void Line(Vector2 a, Vector2 b, Color color, float width = 0.6f)
     {
-        if (y0 == y1)
-        {
-            Fill(Math.Min(x0, x1), y0, Math.Abs(x1 - x0) + 1, 1, color);
+        var d = (b - a) * Scale;
+        float length = d.Length();
+        if (length < 0.01f)
             return;
-        }
-        if (x0 == x1)
+        float w = MathF.Max(1f, width * Scale);
+        float angle = MathF.Atan2(d.Y, d.X);
+        _batch.Draw(_pixel, a * Scale, null, color, angle, new Vector2(0f, 0.5f), new Vector2(length, w),
+            SpriteEffects.None, 0f);
+    }
+
+    public void Line(Vector2 a, Vector2 b, OricColor color, float width = 0.6f) => Line(a, b, color.ToColor(), width);
+
+    public void Line(float x0, float y0, float x1, float y1, OricColor color, float width = 0.6f) =>
+        Line(new Vector2(x0, y0), new Vector2(x1, y1), color.ToColor(), width);
+
+    public void Outline(ReadOnlySpan<Vector2> points, Color color, float width = 0.6f)
+    {
+        for (int i = 0; i < points.Length; i++)
+            Line(points[i], points[(i + 1) % points.Length], color, width);
+    }
+
+    // ---------------------------------------------------------------- polygons
+
+    /// <summary>Fills a convex polygon, one device pixel row at a time.</summary>
+    public void FillPolygon(ReadOnlySpan<Vector2> points, Color color)
+    {
+        foreach (var (y, x0, x1) in Geometry.Spans(points, Scale, DeviceWidth, DeviceHeight))
+            _batch.Draw(_pixel, new Vector2(x0, y), null, color, 0f, Vector2.Zero, new Vector2(x1 - x0, 1f),
+                SpriteEffects.None, 0f);
+    }
+
+    public void FillPolygon(ReadOnlySpan<Vector2> points, OricColor color) => FillPolygon(points, color.ToColor());
+
+    /// <summary>
+    /// Fills a convex polygon with smooth shading: <paramref name="brightness"/> gives the light
+    /// (0 dark .. 1 full colour) at a virtual point, interpolated along each row.
+    /// </summary>
+    public void ShadePolygon(ReadOnlySpan<Vector2> points, Color color, Func<float, float, float> brightness)
+    {
+        foreach (var (y, x0, x1) in Geometry.Spans(points, Scale, DeviceWidth, DeviceHeight))
         {
-            Fill(x0, Math.Min(y0, y1), 1, Math.Abs(y1 - y0) + 1, color);
-            return;
-        }
-        foreach (var (x, y) in Geometry.LinePoints(x0, y0, x1, y1))
-            Plot(x, y, color);
-    }
-
-    public void Line(Point a, Point b, OricColor color) => Line(a.X, a.Y, b.X, b.Y, color);
-
-    /// <summary>Fills a convex polygon with horizontal spans.</summary>
-    public void FillPolygon(ReadOnlySpan<Point> points, OricColor color)
-    {
-        foreach (var (y, x0, x1) in Geometry.Spans(points))
-            Fill(x0, y, x1 - x0 + 1, 1, color);
-    }
-
-    /// <summary>Fills a convex polygon with a two-colour dither (alternate pixels), for shading.</summary>
-    public void DitherPolygon(ReadOnlySpan<Point> points, OricColor a, OricColor b)
-    {
-        foreach (var (y, x0, x1) in Geometry.Spans(points))
-        {
-            Fill(x0, y, x1 - x0 + 1, 1, a);
-            for (int x = x0 + ((x0 + y) & 1); x <= x1; x += 2)
-                Plot(x, y, b);
+            float vy = (y + 0.5f) / Scale;
+            float b0 = Math.Clamp(brightness(x0 / Scale, vy), 0f, 1f);
+            float b1 = Math.Clamp(brightness(x1 / Scale, vy), 0f, 1f);
+            int u0 = (int)(b0 * 255), u1 = (int)(b1 * 255);
+            var flip = SpriteEffects.None;
+            if (u0 > u1)
+            {
+                (u0, u1) = (u1, u0);
+                flip = SpriteEffects.FlipHorizontally;
+            }
+            var src = new Rectangle(u0, 0, Math.Max(1, u1 - u0), 1);
+            _batch.Draw(_ramp, new Vector2(x0, y), src, color, 0f, Vector2.Zero,
+                new Vector2((x1 - x0) / src.Width, 1f), flip, 0f);
         }
     }
 
-    public void Draw(Sprite sprite, int x, int y)
+    /// <summary>A soft dark ellipse on the floor under a figure.</summary>
+    public void Shadow(float cx, float cy, float w, float h, float opacity = 0.6f)
     {
-        _batch.Draw(TextureFor(sprite), new Vector2(x, y), Color.White);
+        _batch.Draw(_shadow, new Vector2((cx - w / 2) * Scale, (cy - h / 2) * Scale), null, Color.Black * opacity, 0f,
+            Vector2.Zero, new Vector2(w * Scale / _shadow.Width, h * Scale / _shadow.Height), SpriteEffects.None, 0f);
     }
 
-    /// <summary>Draws a sprite stretched (point sampled) into a rectangle: used for perspective.</summary>
-    public void DrawScaled(Sprite sprite, Rectangle destination, bool mirror = false)
+    /// <summary>A soft pool of light (torch flames, the lamp, magic).</summary>
+    public void Glow(float cx, float cy, float radius, Color color)
     {
-        if (destination.Width <= 0 || destination.Height <= 0)
+        _batch.Draw(_glow, new Vector2((cx - radius) * Scale, (cy - radius) * Scale), null, color, 0f, Vector2.Zero,
+            new Vector2(radius * 2 * Scale / _glow.Width, radius * 2 * Scale / _glow.Height), SpriteEffects.None, 0f);
+    }
+
+    // ---------------------------------------------------------------- sprites
+
+    public void Draw(Sprite sprite, float x, float y, float pixel = 1f) =>
+        DrawScaled(sprite, new RectF(x, y, sprite.Width * pixel, sprite.Height * pixel));
+
+    /// <summary>Draws a sprite stretched into a rectangle (used for perspective).</summary>
+    public void DrawScaled(Sprite sprite, RectF r, bool mirror = false, Color? tint = null)
+    {
+        if (r.W <= 0 || r.H <= 0)
             return;
-        _batch.Draw(TextureFor(sprite), destination, null, Color.White, 0f, Vector2.Zero,
+        var tex = TextureFor(sprite);
+        _batch.Draw(tex, new Vector2(r.X * Scale, r.Y * Scale), null, tint ?? Color.White, 0f, Vector2.Zero,
+            new Vector2(r.W * Scale / tex.Width, r.H * Scale / tex.Height),
             mirror ? SpriteEffects.FlipHorizontally : SpriteEffects.None, 0f);
     }
 
     /// <summary>Draws a sprite with every solid pixel in a single colour.</summary>
-    public void DrawTinted(Sprite sprite, int x, int y, OricColor color)
+    public void DrawScaledTinted(Sprite sprite, RectF r, Color color, bool mirror = false)
     {
-        _batch.Draw(TextureFor(sprite.Recolor(OricColor.White)), new Vector2(x, y), color.ToColor());
+        // A picture is tinted as it is; a pixel map is turned into a silhouette first.
+        if (HasArt(sprite))
+            DrawScaled(sprite, r, mirror, color);
+        else
+            DrawScaled(sprite.Recolor(OricColor.White), r, mirror, color);
     }
 
-    public void DrawScaledTinted(Sprite sprite, Rectangle destination, OricColor color, bool mirror = false)
-    {
-        if (destination.Width <= 0 || destination.Height <= 0)
-            return;
-        _batch.Draw(TextureFor(sprite.Recolor(OricColor.White)), destination, null, color.ToColor(), 0f, Vector2.Zero,
-            mirror ? SpriteEffects.FlipHorizontally : SpriteEffects.None, 0f);
-    }
+    public void DrawScaledTinted(Sprite sprite, RectF r, OricColor color, bool mirror = false) =>
+        DrawScaledTinted(sprite, r, color.ToColor(), mirror);
 
-    /// <summary>Text at a pixel position, transparent paper.</summary>
-    public void Text(int x, int y, string text, OricColor ink, int scale = 1)
+    // ---------------------------------------------------------------- text
+
+    /// <summary>Text at a virtual position in the (smoothed) Oric ROM font.</summary>
+    public void Text(float x, float y, string text, Color ink, float scale = 1f)
     {
-        var tint = ink.ToColor();
+        float gw = OricFont.GlyphWidth * scale, gh = OricFont.GlyphHeight * scale;
+        var size = new Vector2(gw * Scale / (OricFont.GlyphWidth * FontDetail), gh * Scale / (OricFont.GlyphHeight * FontDetail));
         for (int i = 0; i < text.Length; i++)
         {
             int index = OricFont.IndexOf(text[i]);
             if (index == 0)
                 continue;
-            var src = new Rectangle(index * OricFont.GlyphWidth, 0, OricFont.GlyphWidth, OricFont.GlyphHeight);
-            var dst = new Rectangle(x + i * OricFont.GlyphWidth * scale, y, OricFont.GlyphWidth * scale, OricFont.GlyphHeight * scale);
-            _batch.Draw(_font, dst, src, tint);
+            var src = new Rectangle(index * OricFont.GlyphWidth * FontDetail, 0, OricFont.GlyphWidth * FontDetail,
+                OricFont.GlyphHeight * FontDetail);
+            _batch.Draw(_font, new Vector2((x + i * gw) * Scale, y * Scale), src, ink, 0f, Vector2.Zero, size,
+                SpriteEffects.None, 0f);
         }
     }
 
+    public void Text(float x, float y, string text, OricColor ink, float scale = 1f) => Text(x, y, text, ink.ToColor(), scale);
+
+    /// <summary>Text with a dark drop shadow, for titles over pictures.</summary>
+    public void TextShadowed(float x, float y, string text, Color ink, float scale = 1f)
+    {
+        Text(x + 0.5f * scale, y + 0.5f * scale, text, Color.Black * 0.8f, scale);
+        Text(x, y, text, ink, scale);
+    }
+
     /// <summary>Text at a character cell (40 columns).</summary>
-    public void TextAt(int column, int y, string text, OricColor ink) =>
+    public void TextAt(int column, float y, string text, OricColor ink) =>
         Text(column * OricFont.GlyphWidth, y, text, ink);
 
-    /// <summary>Text horizontally centred on the 40 column screen.</summary>
-    public void TextCentered(int y, string text, OricColor ink, int scale = 1) =>
+    /// <summary>Text horizontally centred on the screen.</summary>
+    public void TextCentered(float y, string text, OricColor ink, float scale = 1f) =>
+        TextCentered(y, text, ink.ToColor(), scale);
+
+    public void TextCentered(float y, string text, Color ink, float scale = 1f) =>
         Text((Width - text.Length * OricFont.GlyphWidth * scale) / 2, y, text, ink, scale);
+
+    public static float TextWidth(string text, float scale = 1f) => text.Length * OricFont.GlyphWidth * scale;
+
+    // ---------------------------------------------------------------- textures
+
+    private readonly Dictionary<string, Texture2D> _art = new();
+
+    /// <summary>The high-resolution picture with this name (embedded Art/name.png), or null.</summary>
+    private Texture2D Art(string name)
+    {
+        if (_art.TryGetValue(name, out var tex))
+            return tex;
+        using var stream = typeof(Canvas).Assembly.GetManifestResourceStream("Art." + name + ".png");
+        if (stream != null)
+        {
+            tex = Texture2D.FromStream(_device, stream);
+            // Pictures are stored with straight alpha; the sprite batch blends premultiplied colour.
+            var data = new Color[tex.Width * tex.Height];
+            tex.GetData(data);
+            for (int i = 0; i < data.Length; i++)
+            {
+                var c = data[i];
+                data[i] = new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, c.A);
+            }
+            tex.SetData(data);
+        }
+        _art[name] = tex;
+        return tex;
+    }
+
+    /// <summary>True when the sprite has a high-resolution picture.</summary>
+    public bool HasArt(Sprite sprite) => Art(sprite.Name) != null;
 
     private Texture2D TextureFor(Sprite sprite)
     {
         if (_textures.TryGetValue(sprite, out var tex))
             return tex;
-        var data = new Color[sprite.Width * sprite.Height];
+        tex = Art(sprite.Name);
+        if (tex != null)
+        {
+            _textures[sprite] = tex;
+            return tex;
+        }
+        var (pixels, w, h) = PixelArt.Smooth(sprite.Pixels, sprite.Width, sprite.Height, SpriteDetail);
+        var data = new Color[w * h];
         for (int i = 0; i < data.Length; i++)
         {
-            byte p = sprite.Pixels[i];
+            byte p = pixels[i];
             data[i] = p == 0 ? Color.Transparent : OricPalette.Colors[p - 1];
         }
-        tex = new Texture2D(_device, sprite.Width, sprite.Height);
+        tex = new Texture2D(_device, w, h);
         tex.SetData(data);
         _textures[sprite] = tex;
+        return tex;
+    }
+
+    private static Texture2D BuildRamp(GraphicsDevice device)
+    {
+        var data = new Color[256];
+        for (int i = 0; i < 256; i++)
+            data[i] = new Color(i, i, i, 255);
+        var tex = new Texture2D(device, 256, 1);
+        tex.SetData(data);
+        return tex;
+    }
+
+    private static Texture2D BuildRadial(GraphicsDevice device, int w, int h, float softness)
+    {
+        var data = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float dx = (x + 0.5f) / w * 2 - 1, dy = (y + 0.5f) / h * 2 - 1;
+                float d = MathF.Sqrt(dx * dx + dy * dy);
+                float a = Math.Clamp((1f - d) / softness, 0f, 1f);
+                a = a * a * (3 - 2 * a);
+                data[y * w + x] = new Color(a, a, a, a);
+            }
+        var tex = new Texture2D(device, w, h);
+        tex.SetData(data);
         return tex;
     }
 
     private static Texture2D BuildFont(GraphicsDevice device)
     {
         int count = OricFont.GlyphCount;
-        int w = count * OricFont.GlyphWidth;
-        int h = OricFont.GlyphHeight;
-        var data = new Color[w * h];
+        int gw = OricFont.GlyphWidth * FontDetail, gh = OricFont.GlyphHeight * FontDetail;
+        int w = count * gw;
+        var data = new Color[w * gh];
         for (int g = 0; g < count; g++)
         {
             var rows = OricFont.GlyphAt(g);
-            for (int y = 0; y < h; y++)
+            var bits = new byte[OricFont.GlyphWidth * OricFont.GlyphHeight];
+            for (int y = 0; y < OricFont.GlyphHeight; y++)
                 for (int x = 0; x < OricFont.GlyphWidth; x++)
                     if ((rows[y] & (1 << (OricFont.GlyphWidth - 1 - x))) != 0)
-                        data[y * w + g * OricFont.GlyphWidth + x] = Color.White;
+                        bits[y * OricFont.GlyphWidth + x] = 1;
+            var (big, bw, bh) = PixelArt.Smooth(bits, OricFont.GlyphWidth, OricFont.GlyphHeight, FontDetail);
+            for (int y = 0; y < bh; y++)
+                for (int x = 0; x < bw; x++)
+                    if (big[y * bw + x] != 0)
+                        data[y * w + g * gw + x] = Color.White;
         }
-        var tex = new Texture2D(device, w, h);
+        var tex = new Texture2D(device, w, gh);
         tex.SetData(data);
         return tex;
     }
@@ -182,13 +352,62 @@ public sealed class Canvas : IDisposable
         foreach (var t in _textures.Values)
             t.Dispose();
         _textures.Clear();
+        foreach (var t in _art.Values)
+            t?.Dispose();
+        _art.Clear();
         _pixel.Dispose();
+        _ramp.Dispose();
+        _shadow.Dispose();
+        _glow.Dispose();
         _font.Dispose();
         _batch.Dispose();
     }
 }
 
-/// <summary>Pure raster helpers (testable without a graphics device).</summary>
+/// <summary>Enlarging pixel art without blocks: the Scale2x (EPX) filter, applied repeatedly.</summary>
+public static class PixelArt
+{
+    /// <summary>Scale2x: doubles the image, rounding off diagonal edges instead of making stairs.</summary>
+    public static byte[] Scale2x(byte[] src, int w, int h)
+    {
+        var dst = new byte[w * 2 * h * 2];
+        int dw = w * 2;
+        byte At(int x, int y) => src[Math.Clamp(y, 0, h - 1) * w + Math.Clamp(x, 0, w - 1)];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                byte b = At(x, y - 1), d = At(x - 1, y), e = At(x, y), f = At(x + 1, y), hh = At(x, y + 1);
+                byte e0 = e, e1 = e, e2 = e, e3 = e;
+                if (b != hh && d != f)
+                {
+                    e0 = d == b ? d : e;
+                    e1 = b == f ? f : e;
+                    e2 = d == hh ? d : e;
+                    e3 = hh == f ? f : e;
+                }
+                dst[y * 2 * dw + x * 2] = e0;
+                dst[y * 2 * dw + x * 2 + 1] = e1;
+                dst[(y * 2 + 1) * dw + x * 2] = e2;
+                dst[(y * 2 + 1) * dw + x * 2 + 1] = e3;
+            }
+        return dst;
+    }
+
+    /// <summary>Applies Scale2x until the image is <paramref name="factor"/> (a power of two) times larger.</summary>
+    public static (byte[] pixels, int width, int height) Smooth(byte[] src, int w, int h, int factor)
+    {
+        var p = src;
+        for (int f = 1; f < factor; f *= 2)
+        {
+            p = Scale2x(p, w, h);
+            w *= 2;
+            h *= 2;
+        }
+        return (p, w, h);
+    }
+}
+
+/// <summary>Raster helpers (testable without a graphics device).</summary>
 public static class Geometry
 {
     public static IEnumerable<(int x, int y)> LinePoints(int x0, int y0, int x1, int y1)
@@ -207,39 +426,33 @@ public static class Geometry
         }
     }
 
-    /// <summary>Horizontal spans (y, xLeft, xRight) covering a convex polygon, clipped to the screen.</summary>
-    public static List<(int y, int x0, int x1)> Spans(ReadOnlySpan<Point> pts)
+    /// <summary>
+    /// Horizontal spans (device row, left, right) covering a convex polygon given in virtual
+    /// pixels, rasterised at <paramref name="scale"/> device pixels per virtual pixel and clipped.
+    /// </summary>
+    public static List<(int y, float x0, float x1)> Spans(ReadOnlySpan<Vector2> pts, float scale, int width, int height)
     {
-        var result = new List<(int, int, int)>();
+        var result = new List<(int, float, float)>();
         if (pts.Length < 3)
             return result;
-        int top = int.MaxValue, bottom = int.MinValue;
+        float top = float.MaxValue, bottom = float.MinValue;
         foreach (var p in pts)
         {
-            top = Math.Min(top, p.Y);
-            bottom = Math.Max(bottom, p.Y);
+            top = Math.Min(top, p.Y * scale);
+            bottom = Math.Max(bottom, p.Y * scale);
         }
-        top = Math.Max(top, 0);
-        bottom = Math.Min(bottom, Canvas.Height - 1);
-        for (int y = top; y <= bottom; y++)
+        int y0 = Math.Max(0, (int)MathF.Floor(top));
+        int y1 = Math.Min(height - 1, (int)MathF.Ceiling(bottom) - 1);
+        for (int y = y0; y <= y1; y++)
         {
-            float left = float.MaxValue, right = float.MinValue;
             float yc = y + 0.5f;
+            float left = float.MaxValue, right = float.MinValue;
             for (int i = 0; i < pts.Length; i++)
             {
-                var a = pts[i];
-                var b = pts[(i + 1) % pts.Length];
-                if (a.Y == b.Y)
-                {
-                    if (a.Y == y)
-                    {
-                        left = Math.Min(left, Math.Min(a.X, b.X));
-                        right = Math.Max(right, Math.Max(a.X, b.X));
-                    }
-                    continue;
-                }
+                var a = pts[i] * scale;
+                var b = pts[(i + 1) % pts.Length] * scale;
                 float lo = Math.Min(a.Y, b.Y), hi = Math.Max(a.Y, b.Y);
-                if (yc < lo || yc > hi)
+                if (yc < lo || yc > hi || hi - lo < 1e-6f)
                     continue;
                 float x = a.X + (yc - a.Y) * (b.X - a.X) / (b.Y - a.Y);
                 left = Math.Min(left, x);
@@ -247,10 +460,10 @@ public static class Geometry
             }
             if (left > right)
                 continue;
-            int x0 = Math.Max(0, (int)Math.Round(left));
-            int x1 = Math.Min(Canvas.Width - 1, (int)Math.Round(right));
-            if (x0 <= x1)
-                result.Add((y, x0, x1));
+            left = Math.Max(0, left);
+            right = Math.Min(width, right);
+            if (right > left)
+                result.Add((y, left, right));
         }
         return result;
     }

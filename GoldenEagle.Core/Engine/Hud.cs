@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using GoldenEagle.Core.Graphics;
 
 namespace GoldenEagle.Core.Engine;
 
@@ -24,5 +25,5 @@ public static class Hud
 
     public static Rectangle DropButton => new(ButtonX, DropY, ButtonWidth, ButtonHeight);
 
-    public static bool Hit(Rectangle r, Vector2 p) => p.X >= r.Left && p.X < r.Right && p.Y >= r.Top && p.Y < r.Bottom;
+    public static bool Hit(RectF r, Vector2 p) => r.Contains(p);
 }

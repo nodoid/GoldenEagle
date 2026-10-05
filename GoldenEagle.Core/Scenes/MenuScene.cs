@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using GoldenEagle.Core.Audio;
 using GoldenEagle.Core.Graphics;
 using GoldenEagle.Core.Localization;
@@ -114,9 +115,10 @@ public sealed class MenuScene : Scene
 
     public override void Draw(Canvas c)
     {
+        Backdrop.Draw(c, Ticks, 0.55f);
         TitleScene.DrawEagle(c, 4, Ticks, 2);
-        c.TextCentered(64, Strings.Title, OricColor.Yellow, 2);
-        c.TextCentered(84, Strings.Subtitle, OricColor.Cyan);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Title, 2)) / 2, 64, Strings.Title, new Color(255, 214, 90), 2);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Subtitle)) / 2, 84, Strings.Subtitle, new Color(150, 220, 255));
 
         var items = Items();
         for (int i = 0; i < items.Count; i++)
@@ -126,9 +128,11 @@ public sealed class MenuScene : Scene
             if (i == _selected)
             {
                 // Oric inverse video highlight.
-                int w = (text.Length + 2) * 6;
-                c.Fill((Canvas.Width - w) / 2, y - 2, w, 11, OricColor.Yellow);
-                c.TextCentered(y, text, OricColor.Blue);
+                float w = (text.Length + 2) * 6;
+                c.ShadePolygon([new((Canvas.Width - w) / 2, y - 2), new((Canvas.Width + w) / 2, y - 2),
+                        new((Canvas.Width + w) / 2, y + 9), new((Canvas.Width - w) / 2, y + 9)],
+                    new Color(240, 196, 80), (_, yy) => 1.1f - 0.4f * (yy - y + 2) / 11f);
+                c.TextCentered(y, text, new Color(30, 20, 60));
             }
             else
             {
@@ -137,6 +141,6 @@ public sealed class MenuScene : Scene
         }
 
         c.TextCentered(204, Strings.Credit, OricColor.Cyan);
-        c.TextCentered(214, Strings.BasedOn, OricColor.Green);
+        c.TextCentered(214, Strings.BasedOn, new Color(170, 230, 170));
     }
 }

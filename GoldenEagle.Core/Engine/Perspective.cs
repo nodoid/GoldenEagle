@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Xna.Framework;
+using GoldenEagle.Core.Graphics;
 
 namespace GoldenEagle.Core.Engine;
 
@@ -28,12 +29,12 @@ public static class Perspective
 
     public static float Scale(float z) => 1f / (1f + z * Depth);
 
-    public static Point Project(float x, float z, float h = 0)
+    public static Vector2 Project(float x, float z, float h = 0)
     {
         float k = Scale(z);
         float floor = VanishY + (FrontFloorY - VanishY) * k;
         float wall = (FrontFloorY - FrontCeilingY) * k;
-        return new Point((int)MathF.Round(CenterX + x * FrontHalfWidth * k), (int)MathF.Round(floor - h * wall));
+        return new Vector2(CenterX + x * FrontHalfWidth * k, floor - h * wall);
     }
 
     /// <summary>Screen height of the walls at depth z.</summary>
@@ -54,12 +55,11 @@ public static class Perspective
     }
 
     /// <summary>Screen rectangle of a sprite standing at (x, z), lifted h above the floor.</summary>
-    public static Rectangle SpriteRect(int width, int height, float x, float z, float h = 0)
+    public static RectF SpriteRect(int width, int height, float x, float z, float h = 0)
     {
         float s = SpritePixel * Scale(z);
         var foot = Project(x, z, h);
-        int w = Math.Max(1, (int)MathF.Round(width * s));
-        int hh = Math.Max(1, (int)MathF.Round(height * s));
-        return new Rectangle(foot.X - w / 2, foot.Y - hh, w, hh);
+        float w = width * s, hh = height * s;
+        return new RectF(foot.X - w / 2, foot.Y - hh, w, hh);
     }
 }

@@ -11,6 +11,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- High-resolution artwork drawn by tools/make_art.py, loaded by name at run time. -->
+    <EmbeddedResource Include="Art\*.png" LogicalName="Art.%(Filename).png" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="GoldenEagle.Tests" />
   </ItemGroup>
 </Project>

@@ -28,6 +28,7 @@ public sealed class EndScene : Scene
 
     public override void Draw(Canvas c)
     {
+        Backdrop.Draw(c, Ticks, 0.35f);
         if (Won)
         {
             TitleScene.DrawEagle(c, 6, Ticks);
@@ -40,7 +41,7 @@ public sealed class EndScene : Scene
             c.TextCentered(30, Strings.GameOver, OricColor.Red, 2);
             string why = _adventure.Outcome == Outcome.FellIntoAbyss ? Strings.DeathAbyss : Strings.DeathEnergy;
             c.TextCentered(62, why, OricColor.White);
-            var ghost = Sprite.Of(SpriteData.Ghost0, "Ghost");
+            var ghost = Sprite.Of(SpriteData.Ghost0);
             int bob = Ticks / 8 % 2 * 2;
             c.DrawScaled(ghost, new Microsoft.Xna.Framework.Rectangle(108, 80 + bob, 24, 28));
         }

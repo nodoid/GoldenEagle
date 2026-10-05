@@ -30,6 +30,9 @@ public sealed class SoundBank : ISoundPlayer, IDisposable
         }
     }
 
+    /// <summary>Silences everything without changing the volume setting (store captures).</summary>
+    public bool Muted { get; set; }
+
     public float Volume => VolumeSteps[_volumeIndex];
 
     /// <summary>0 off, 1 low, 2 medium, 3 high.</summary>
@@ -45,7 +48,7 @@ public sealed class SoundBank : ISoundPlayer, IDisposable
 
     public void Play(Sfx sfx, float pitch = 0f)
     {
-        if (!_enabled || Volume <= 0f)
+        if (!_enabled || Muted || Volume <= 0f)
             return;
         if (_effects.TryGetValue(sfx, out var e))
         {
@@ -100,7 +103,7 @@ public sealed class SoundBank : ISoundPlayer, IDisposable
     /// <summary>Plays the title tune once (restarting it if it is already playing).</summary>
     public void PlayTune()
     {
-        if (!_enabled || Volume <= 0f || _tune == null)
+        if (!_enabled || Muted || Volume <= 0f || _tune == null)
             return;
         try
         {

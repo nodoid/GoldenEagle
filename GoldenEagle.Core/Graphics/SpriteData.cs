@@ -6,6 +6,22 @@ namespace GoldenEagle.Core.Graphics;
 /// </summary>
 public static class SpriteData
 {
+    private static System.Collections.Generic.Dictionary<string[], string> _names;
+
+    /// <summary>The field name of a map declared here, or null.</summary>
+    public static string NameOf(string[] rows)
+    {
+        if (_names == null)
+        {
+            var names = new System.Collections.Generic.Dictionary<string[], string>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+            foreach (var f in typeof(SpriteData).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+                if (f.GetValue(null) is string[] map)
+                    names[map] = f.Name;
+            _names = names;
+        }
+        return _names.TryGetValue(rows, out var name) ? name : null;
+    }
+
     // ---------------------------------------------------------------- the hero (12 x 24)
 
     public static readonly string[] HeroFront0 =

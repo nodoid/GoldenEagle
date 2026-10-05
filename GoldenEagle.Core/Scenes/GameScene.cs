@@ -86,7 +86,7 @@ public sealed class GameScene : Scene, IPausable
         if (_adventure.CanSee(room))
         {
             var item = _adventure.ItemsIn(room)
-                .Where(i => Inflate(RoomRenderer.ItemRect(i), 4).Contains((int)p.X, (int)p.Y))
+                .Where(i => RoomRenderer.ItemRect(i).Inflate(4).Contains(p))
                 .OrderBy(i => i.Z)
                 .FirstOrDefault();
             if (item != null)
@@ -100,7 +100,7 @@ public sealed class GameScene : Scene, IPausable
         foreach (var door in _adventure.Castle.DoorsOf(room))
         {
             var end = door.EndIn(room);
-            if (!RoomRenderer.DoorBounds(end).Contains((int)p.X, (int)p.Y))
+            if (!RoomRenderer.DoorBounds(end).Contains(p))
                 continue;
             // A tap on the floor well inside the room is a walk, even near a front exit.
             if (end.Side == World.Side.Front && floor is (_, float z) && z > 0.12f)
@@ -113,8 +113,6 @@ public sealed class GameScene : Scene, IPausable
         if (floor is (float fx, float fz))
             _cmd.Walk = new WalkTarget(fx, fz);
     }
-
-    private static Rectangle Inflate(Rectangle r, int by) => new(r.X - by, r.Y - by, r.Width + by * 2, r.Height + by * 2);
 
     public override void Draw(Canvas c)
     {

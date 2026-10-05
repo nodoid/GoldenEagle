@@ -118,6 +118,7 @@ public sealed class HallOfFameScene : Scene
 
     public override void Draw(Canvas c)
     {
+        Backdrop.Draw(c, Ticks, 0.35f);
         c.TextCentered(2, Strings.HallOfFame, OricColor.Yellow, 2);
         if (_entering)
         {

@@ -12,7 +12,7 @@ namespace GoldenEagle.Core.Demo;
 /// <summary>
 /// Store asset capture: plays a list of scenes, saving native 240x224 frames as PNG (stills,
 /// or every tick for videos) and recording the sound effects so a matching audio track can be
-/// mixed. Start with <c>--capture &lt;folder&gt; [stills|videos|all] [--mobile] [--lang fr|en]</c>.
+/// mixed. Start with <c>--capture &lt;folder&gt; [stills|videos|all] [--mobile] [--lang fr|en] [--scale n]</c>.
 /// </summary>
 public sealed class CaptureDirector : ISoundPlayer
 {
@@ -31,8 +31,9 @@ public sealed class CaptureDirector : ISoundPlayer
     private bool _saveThisFrame;
     private readonly List<(int frame, Sfx sfx)> _events = new();
 
-    public CaptureDirector(string folder, List<Shot> shots, bool mobile, Language language)
+    public CaptureDirector(string folder, List<Shot> shots, bool mobile, Language language, float scale)
     {
+        Scale = scale;
         _folder = folder;
         _shots = shots;
         Mobile = mobile;
@@ -40,6 +41,9 @@ public sealed class CaptureDirector : ISoundPlayer
     }
 
     public bool Mobile { get; }
+
+    /// <summary>Capture resolution in device pixels per virtual pixel (10 gives 2400 x 2240).</summary>
+    public float Scale { get; }
     public Language Language { get; }
     public bool Finished { get; private set; }
 
@@ -58,7 +62,10 @@ public sealed class CaptureDirector : ISoundPlayer
             shots.AddRange(Stills());
         if (what is "videos" or "all")
             shots.AddRange(Videos());
-        return new CaptureDirector(folder, shots, mobile, language);
+        int sc = Array.IndexOf(args, "--scale");
+        float scale = sc >= 0 && sc + 1 < args.Length && float.TryParse(args[sc + 1], System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out float s) ? s : what == "videos" ? 6f : 10f;
+        return new CaptureDirector(folder, shots, mobile, language, scale);
     }
 
     private static Scene Castle(GoldenEagleGame g, ISoundPlayer s) => new DemoScene(g, s, attract: false);

@@ -1,3 +1,5 @@
+using System;
+using Microsoft.Xna.Framework;
 using GoldenEagle.Core.Graphics;
 using GoldenEagle.Core.Localization;
 using GoldenEagle.Core.Oric;
@@ -35,29 +37,28 @@ public sealed class TitleScene : Scene
 
     public override void Draw(Canvas c)
     {
-        DrawEagle(c, 8, Ticks);
-        c.TextCentered(96, Strings.Title, OricColor.Yellow, 2);
-        c.TextCentered(116, Strings.Subtitle, OricColor.Cyan);
-        c.TextCentered(146, Strings.Credit, OricColor.White);
-        c.TextCentered(160, Strings.BasedOn, OricColor.Green);
-        c.TextCentered(170, Strings.Author, OricColor.Green);
-        if (Ticks / 25 % 2 == 0)
-            c.TextCentered(196, Strings.PressToStart(Game.IsMobile), OricColor.Magenta);
+        Backdrop.Draw(c, Ticks);
+        DrawEagle(c, 6, Ticks);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Title, 2)) / 2, 92, Strings.Title, new Color(255, 214, 90), 2);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Subtitle)) / 2, 112, Strings.Subtitle, new Color(150, 220, 255));
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Credit)) / 2, 192, Strings.Credit, Color.White);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.BasedOn)) / 2, 202, Strings.BasedOn, new Color(170, 230, 170));
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(Strings.Author)) / 2, 212, Strings.Author, new Color(170, 230, 170));
+        float pulse = 0.6f + 0.4f * MathF.Sin(Ticks * 0.12f);
+        string start = Strings.PressToStart(Game.IsMobile);
+        c.TextShadowed((Canvas.Width - Canvas.TextWidth(start)) / 2, 126, start, new Color(255, 120, 255) * pulse);
     }
 
-    /// <summary>The big eagle with a sparkle running over it.</summary>
-    public static void DrawEagle(Canvas c, int y, int ticks, int scale = 3)
+    /// <summary>The great golden eagle, glowing, with a glint running over its wings.</summary>
+    public static void DrawEagle(Canvas c, float y, int ticks, float scale = 3f)
     {
-        var eagle = Sprite.Of(SpriteData.TitleEagle, "title-eagle");
-        int w = eagle.Width * scale, h = eagle.Height * scale;
-        int x = (Canvas.Width - w) / 2;
-        c.DrawScaled(eagle, new Microsoft.Xna.Framework.Rectangle(x, y, w, h));
-        int sweep = ticks * 3 % (w + 120) - 60;
-        for (int py = 0; py < eagle.Height; py++)
-        {
-            int px = (sweep - py * scale) / scale;
-            if (eagle.IsSolid(px, py))
-                c.Fill(x + px * scale, y + py * scale, scale, scale, OricColor.White);
-        }
+        var eagle = Sprite.Of(SpriteData.TitleEagle);
+        float w = eagle.Width * scale, h = eagle.Height * scale;
+        float x = (Canvas.Width - w) / 2;
+        float pulse = 0.8f + 0.2f * MathF.Sin(ticks * 0.06f);
+        c.Glow(x + w / 2, y + h / 2, w * 0.45f, new Color(255, 190, 60) * 0.35f * pulse);
+        c.DrawScaled(eagle, new RectF(x, y, w, h));
+        float sweep = ticks * 2.2f % (w + 160) - 80;
+        c.Glow(x + sweep, y + h * 0.3f, 10 * scale / 3, Color.White * 0.35f);
     }
 }

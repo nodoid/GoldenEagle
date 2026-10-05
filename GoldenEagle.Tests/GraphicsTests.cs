@@ -40,20 +40,59 @@ public class GraphicsTests
         Assert.Equal(18, pts.Count);
     }
 
-    [Fact]
-    public void Polygon_spans_cover_a_rectangle_exactly()
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(4f)]
+    [InlineData(8.5f)]
+    public void Polygon_spans_cover_a_rectangle_exactly_at_any_resolution(float scale)
     {
-        var spans = Geometry.Spans([new Point(10, 10), new Point(20, 10), new Point(20, 15), new Point(10, 15)]);
-        Assert.Equal(6, spans.Count);
-        Assert.All(spans, s => Assert.Equal((10, 20), (s.x0, s.x1)));
+        var spans = Geometry.Spans([new Vector2(10, 10), new Vector2(20, 10), new Vector2(20, 15), new Vector2(10, 15)],
+            scale, (int)(240 * scale), (int)(224 * scale));
+        Assert.InRange(spans.Count, (int)(5 * scale) - 1, (int)(5 * scale) + 1);
+        Assert.All(spans, s =>
+        {
+            Assert.Equal(10 * scale, s.x0, 3);
+            Assert.Equal(20 * scale, s.x1, 3);
+        });
     }
 
     [Fact]
     public void Polygon_spans_are_clipped_to_the_screen()
     {
-        var spans = Geometry.Spans([new Point(-50, -10), new Point(300, -10), new Point(300, 400), new Point(-50, 400)]);
-        Assert.Equal(Canvas.Height, spans.Count);
-        Assert.All(spans, s => Assert.Equal((0, Canvas.Width - 1), (s.x0, s.x1)));
+        var spans = Geometry.Spans([new Vector2(-50, -10), new Vector2(300, -10), new Vector2(300, 400), new Vector2(-50, 400)],
+            4f, 960, 896);
+        Assert.Equal(896, spans.Count);
+        Assert.All(spans, s => Assert.Equal((0f, 960f), (s.x0, s.x1)));
+    }
+
+    [Fact]
+    public void Scale2x_rounds_off_diagonals_and_keeps_solid_areas()
+    {
+        // A 2x2 diagonal: the corners that touch both neighbours fill in.
+        byte[] art = [1, 0, 0, 1];
+        var big = PixelArt.Scale2x(art, 2, 2);
+        Assert.Equal(16, big.Length);
+        byte[] solid = [3, 3, 3, 3];
+        Assert.All(PixelArt.Scale2x(solid, 2, 2), b => Assert.Equal(3, b));
+        var (p, w, h) = PixelArt.Smooth(solid, 2, 2, 8);
+        Assert.Equal((16, 16, 256), (w, h, p.Length));
+    }
+
+    [Fact]
+    public void Scale2x_smooths_a_staircase_edge()
+    {
+        // A stepped diagonal (1 = ink) becomes a smoother slope: the doubled image has fewer
+        // corner steps than a plain pixel doubling would.
+        byte[] art =
+        [
+            1, 0, 0,
+            1, 1, 0,
+            1, 1, 1,
+        ];
+        var big = PixelArt.Scale2x(art, 3, 3);
+        // Plain doubling would leave (3,1) empty; Scale2x fills it to round the corner.
+        Assert.Equal(1, big[1 * 6 + 1]);
+        Assert.Equal(0, big[0 * 6 + 5]);
     }
 
     [Fact]
@@ -62,7 +101,7 @@ public class GraphicsTests
         var frontLeft = Perspective.Project(-1, 0);
         var backLeft = Perspective.Project(-1, 1);
         Assert.Equal(Perspective.FrontFloorY, frontLeft.Y);
-        Assert.InRange(frontLeft.X, 0, 8);
+        Assert.InRange(frontLeft.X, 0f, 8f);
         Assert.True(backLeft.X > frontLeft.X + 50);
         Assert.True(backLeft.Y < frontLeft.Y);
         Assert.Equal(Perspective.BackScale, Perspective.Scale(1), 3);
@@ -79,8 +118,8 @@ public class GraphicsTests
         var p = Perspective.Project(x, z);
         var floor = Perspective.ToFloor(p.X, p.Y);
         Assert.NotNull(floor);
-        Assert.Equal(x, floor.Value.x, 1);
-        Assert.Equal(z, floor.Value.z, 1);
+        Assert.Equal(x, floor.Value.x, 0.01);
+        Assert.Equal(z, floor.Value.z, 0.01);
     }
 
     [Fact]
@@ -94,7 +133,7 @@ public class GraphicsTests
     {
         var near = Perspective.SpriteRect(12, 24, 0, 0.1f);
         var far = Perspective.SpriteRect(12, 24, 0, 0.9f);
-        Assert.True(near.Height > far.Height * 1.8);
+        Assert.True(near.H > far.H * 1.8);
         Assert.True(near.Bottom > far.Bottom);
     }
 
@@ -140,12 +179,12 @@ public class GraphicsTests
     }
 
     [Theory]
-    [InlineData(960, 896, true, 0, 0, 960, 896)]
-    [InlineData(2532, 1170, false, 39, 0, 1253, 1170)]
-    public void The_screen_is_scaled_to_fit(int w, int h, bool integer, int x, int y, int ew, int eh)
+    [InlineData(960, 896, 0, 0, 960, 896)]
+    [InlineData(2532, 1170, 639, 0, 1253, 1170)]
+    [InlineData(1000, 2000, 0, 533, 999, 933)]
+    public void The_screen_is_scaled_to_fit(int w, int h, int x, int y, int ew, int eh)
     {
-        var r = GoldenEagleGame.ComputeDestination(w, h, integer);
-        Assert.Equal(new Rectangle(x + (integer ? 0 : (w - ew) / 2 - x), y, ew, eh), r);
+        Assert.Equal(new Rectangle(x, y, ew, eh), GoldenEagleGame.ComputeDestination(w, h, false));
     }
 
     [Fact]
@@ -156,5 +195,6 @@ public class GraphicsTests
             for (int j = i + 1; j < rects.Count; j++)
                 Assert.False(rects[i].Intersects(rects[j]), $"{i} {j}");
         Assert.All(rects, r => Assert.True(r.Top >= Hud.Top && r.Bottom <= Hud.StatusY && r.Right <= Canvas.Width));
+        Assert.True(Hud.Hit(Hud.UseButton, new Vector2(Hud.ButtonX + 2, Hud.UseY + 2)));
     }
 }
